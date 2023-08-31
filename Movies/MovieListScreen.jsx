@@ -14,13 +14,15 @@ import {
 
 // Other imports
 
+import { API_KEY} from '@env';
+
 
 const MoviesList = (props) => {
   const [movies, setMovies] = useState([]);
 
   useEffect(() => {
       axios
-      .get('https://api.themoviedb.org/3/movie/now_playing?api_key=29725847b9558a283e8e8f82eec493d5&append_to_response=videos')
+      .get(`https://api.themoviedb.org/3/movie/now_playing?api_key=${API_KEY}&append_to_response=videos`)
       .then(response => {
         console.log(response.data.results);
         setMovies(response.data.results);
@@ -35,9 +37,6 @@ const MoviesList = (props) => {
     )
   }
 
-  /* const itemPressed = (index) => {
-    props.navigation.navigate('MovieDetails');
-  } */
 
   let movieItems = movies.map(function(movie,index){
 
