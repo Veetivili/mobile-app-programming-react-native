@@ -1,18 +1,18 @@
 import React, {useState} from 'react';
-import {View, StyleSheet} from 'react-native';
-import {Marker} from 'react-native-maps';
+import {View, StyleSheet, Button, TextInput} from 'react-native';
+import {Callout, Marker} from 'react-native-maps';
 import {enableLatestRenderer} from 'react-native-maps';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps'; 
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { Text } from 'react-native-elements';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { FloatingAction } from "react-native-floating-action";
+import { Dialog } from 'react-native-simple-dialogs';
 
 enableLatestRenderer();
 
 import { Icon } from 'react-native-elements';
 
-const locationActions = () => {
+const locationActions = () => {  
   const actions = [
     {
       name: "Location",
@@ -31,9 +31,16 @@ const locationActions = () => {
   );
 };
 
+interface Place {
+  lat: string;
+  lon: string;
+  name: string;
+}
+
 const App = () => {
-  const [place, setPlace] = useState([]);
-  const [city, setCity] = useState('Helsinki');
+  const [place, setPlace] = useState<Place[]>([]);
+  const [city, setCity] = useState('');
+  const [showDialog, setShowDialog] = useState(false);
 
   enableLatestRenderer();
 
@@ -42,17 +49,45 @@ const App = () => {
   const format = '&format=json&limit=1';
 
 
+  const dialogView = () => {
+  
+    if (showDialog) {
+      return (
+        <Dialog
+          visible={showDialog}
+          title="Add a new place"
+          onTouchOutside={() => setShowDialog(false)}
+        >
+          <View style={{zIndex: 2, width: 100, height: 100}}>
+            <Text>City</Text>
+            <TextInput
+              style={styles.input}
+              onChangeText={text => setCity(text)}
+              value={city}
+            />
+            <View style={{display: 'flex', flexDirection: 'row-reverse', gap: 3, justifyContent: 'space-between', width: 300}}>
+            <Button title="Add" onPress={newPlace} />
+            <Button title="Cancel" onPress={() => setShowDialog(false)} />
+            </View>
+          </View>
+        </Dialog>
+      );
+    }
+  };
+
+
   const newPlace = () => {
+    setShowDialog(false);
     axios
-    .get(URL + City + format)
+      .get(URL + City + format)
       .then(response => {
         console.log(response.data);
-        setPlace(response.data);
+        const { lat, lon } = response.data[0];
+        setPlace([...place, { lat, lon, name: City}]);
       })
       .catch(error => {
         console.log(error);
-      }
-    );
+      });
   };
 
   const position = {
@@ -62,15 +97,11 @@ const App = () => {
     longitudeDelta: 14,
   };
 
-  const newMarker = {
-    latitude: 60.19,
-    longitude: 24.94,
-  };
-  
   return(
-    <SafeAreaView>
-    <Text>My Places</Text>
+    
     <View style={styles.container}>
+      <Text>My Places</Text>
+      {dialogView()}
      <MapView 
        provider={PROVIDER_GOOGLE} // remove if not using Google Maps
        style={styles.map}
@@ -78,11 +109,20 @@ const App = () => {
        zoomEnabled={true}
        zoomControlEnabled={true}
      >
-      <Marker coordinate={newMarker} />
-      {locationActions()}
+      {place.map((p, index) => (
+        <Marker key={index} coordinate={{latitude: parseFloat(p.lat), longitude: parseFloat(p.lon)}}>
+          <Callout>
+            <Text>{p.name}</Text>
+          </Callout>
+          </Marker>
+      ))}
      </MapView>
+     <View style={{position: "absolute", bottom: 70, right: -25, backgroundColor: "black"}}>
+      {locationActions()}
+      <FloatingAction onPressMain={() => setShowDialog(true)} />
+     </View>
+     
    </View>
-   </SafeAreaView>
   );
 };
 
@@ -96,6 +136,13 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+  },
+  input: {
+    height: 40,
+    width: 300,
+    marginBottom: 4,
+    borderColor: 'gray',
+    borderWidth: 1,
   },
  });
 
